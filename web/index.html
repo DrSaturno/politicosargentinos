@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Políticos Argentinos — Directorio con fuentes oficiales</title>
+<meta name="description" content="Ficha de cada diputado, senador, gobernador y ministro de Argentina: foto, bloque, provincia, sueldos, votaciones. Todo con fuente oficial.">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header class="sitio">
+  <h1><a href="index.html">Políticos Argentinos<small>datos oficiales, con fuente</small></a></h1>
+  <nav>
+    <a href="index.html" class="activo">Directorio</a>
+    <a href="ley.html?slug=super-rigi">Súper RIGI</a>
+    <a href="rigi.html">Mapa RIGI</a>
+  </nav>
+</header>
+<main>
+  <div class="filtros">
+    <input id="buscar" type="search" placeholder="Buscar por nombre o apellido…" autocomplete="off">
+    <select id="f-cargo">
+      <option value="">Todos los cargos</option>
+      <option value="diputado">Diputados</option>
+      <option value="senador">Senadores</option>
+      <option value="gobernador">Gobernadores</option>
+      <option value="presidente">Presidente</option>
+      <option value="jefe_gabinete">Jefe de Gabinete</option>
+      <option value="ministro">Ministros</option>
+      <option value="funcionario">Funcionarios</option>
+    </select>
+    <select id="f-provincia"><option value="">Todas las provincias</option></select>
+    <select id="f-bloque"><option value="">Todos los bloques</option></select>
+  </div>
+  <div class="contador" id="contador"></div>
+  <div class="grilla" id="grilla"><div class="cargando">Cargando directorio…</div></div>
+</main>
+<footer class="sitio">
+  Todos los datos provienen de fuentes oficiales y citan su origen.
+  Sin fuente verificable, el dato no se publica.
+</footer>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+let PERSONAS = [];
+
+function normalizar(s) {
+  return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+function render() {
+  const q = normalizar(document.getElementById("buscar").value);
+  const cargo = document.getElementById("f-cargo").value;
+  const prov = document.getElementById("f-provincia").value;
+  const bloque = document.getElementById("f-bloque").value;
+
+  const filtradas = PERSONAS.filter((p) =>
+    (!cargo || p.cargo === cargo) &&
+    (!prov || p.provincia === prov) &&
+    (!bloque || p.bloque === bloque) &&
+    (!q || normalizar(`${p.nombre} ${p.apellido}`).includes(q))
+  );
+  document.getElementById("contador").textContent =
+    `${filtradas.length} de ${PERSONAS.length} personas`;
+  document.getElementById("grilla").innerHTML =
+    filtradas.map(cardPersona).join("") ||
+    `<div class="cargando">Sin resultados con esos filtros.</div>`;
+}
+
+function poblarSelect(id, valores) {
+  const sel = document.getElementById(id);
+  [...new Set(valores.filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"))
+    .forEach((v) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = titulo(v);
+      sel.appendChild(o);
+    });
+}
+
+async function init() {
+  try {
+    const orden = { presidente: 0, jefe_gabinete: 1, ministro: 2, funcionario: 3, gobernador: 4, senador: 5, diputado: 6 };
+    PERSONAS = await sb("persona",
+      "select=slug,nombre,apellido,cargo,provincia,bloque,ministerio,foto_path&activo=eq.true&order=apellido.asc&limit=1000");
+    PERSONAS.sort((a, b) => (orden[a.cargo] ?? 9) - (orden[b.cargo] ?? 9) || a.apellido.localeCompare(b.apellido, "es"));
+    poblarSelect("f-provincia", PERSONAS.map((p) => p.provincia));
+    poblarSelect("f-bloque", PERSONAS.map((p) => p.bloque));
+    render();
+  } catch (e) {
+    document.getElementById("grilla").innerHTML =
+      `<div class="aviso">No se pudo cargar el directorio: ${escaparHtml(e.message)}.<br>
+       ¿Está configurada la ANON KEY en <code>config.js</code> y el RLS en Supabase?</div>`;
+  }
+}
+
+["buscar", "f-cargo", "f-provincia", "f-bloque"].forEach((id) =>
+  document.getElementById(id).addEventListener("input", render));
+init();
+</script>
+</body>
+</html>

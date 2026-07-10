@@ -1,0 +1,68 @@
+{
+  "name": "TransparenciaAR — Detector de votaciones nuevas",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 24, "triggerAtHour": 8 }]
+        }
+      },
+      "name": "Cron diario 08:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "command": "cd /opt/transparencia-ar/scripts && python3 detectar_votaciones.py"
+      },
+      "name": "Detectar votaciones",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "typeValidation": "strict" },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.stdout }}",
+              "rightValue": "sin votaciones nuevas",
+              "operator": { "type": "string", "operation": "notContains" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "¿Hay nuevas?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "content": "## Notificación\nConectar acá el nodo de Telegram o Email con `{{ $json.stdout }}` en el cuerpo.\nCada línea es un acta nueva a revisar. Si corresponde a una ley destacada, correr:\n`python3 ingesta_votacion_hcdn.py --votacion-id N --ley-slug X --fecha YYYY-MM-DD`\no `python3 ingesta_votacion_senado.py --acta-id N --ley-slug X --fecha YYYY-MM-DD`",
+        "height": 220,
+        "width": 380
+      },
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [660, -260]
+    },
+    {
+      "parameters": {},
+      "name": "Notificar (conectar Telegram/Email)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [660, 0]
+    }
+  ],
+  "connections": {
+    "Cron diario 08:00": { "main": [[{ "node": "Detectar votaciones", "type": "main", "index": 0 }]] },
+    "Detectar votaciones": { "main": [[{ "node": "¿Hay nuevas?", "type": "main", "index": 0 }]] },
+    "¿Hay nuevas?": { "main": [[{ "node": "Notificar (conectar Telegram/Email)", "type": "main", "index": 0 }], []] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

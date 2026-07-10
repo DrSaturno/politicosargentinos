@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ley — Políticos Argentinos</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header class="sitio">
+  <h1><a href="index.html">Políticos Argentinos<small>datos oficiales, con fuente</small></a></h1>
+  <nav>
+    <a href="index.html">Directorio</a>
+    <a href="ley.html?slug=super-rigi" class="activo">Súper RIGI</a>
+    <a href="rigi.html">Mapa RIGI</a>
+  </nav>
+</header>
+<main id="contenido"><div class="cargando">Cargando…</div></main>
+<footer class="sitio">
+  Todos los datos provienen de fuentes oficiales y citan su origen.
+</footer>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+const slug = new URLSearchParams(location.search).get("slug");
+let VOTOS = [];
+let VOTACION = null;
+
+function normalizar(s) {
+  return (s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+function renderTabla() {
+  const q = normalizar(document.getElementById("v-buscar")?.value);
+  const valor = document.getElementById("v-valor")?.value;
+  const bloque = document.getElementById("v-bloque")?.value;
+  const filtrados = VOTOS.filter((v) =>
+    (!valor || v.valor === valor) &&
+    (!bloque || v.persona.bloque === bloque) &&
+    (!q || normalizar(`${v.persona.nombre} ${v.persona.apellido}`).includes(q))
+  );
+  document.getElementById("v-contador").textContent = `${filtrados.length} de ${VOTOS.length} votos`;
+  document.getElementById("v-tabla").innerHTML = `
+    <tr><th>Legislador/a</th><th>Bloque</th><th>Provincia</th><th>Voto</th></tr>
+    ${filtrados.map((v) => {
+      const foto = fotoUrl(v.persona.foto_path);
+      return `<tr>
+        <td>${foto ? `<img src="${foto}" alt="" loading="lazy" onerror="this.remove()">` : ""}
+            <a href="persona.html?slug=${encodeURIComponent(v.persona.slug)}">${escaparHtml(v.persona.nombre)} ${escaparHtml(v.persona.apellido)}</a></td>
+        <td>${escaparHtml(titulo(v.persona.bloque))}</td>
+        <td>${escaparHtml(titulo(v.persona.provincia))}</td>
+        <td><span class="voto-chip voto-${v.valor}">${v.valor.toUpperCase()}</span></td>
+      </tr>`;
+    }).join("")}`;
+}
+
+function exportarCSV() {
+  const filas = [["apellido", "nombre", "bloque", "provincia", "voto", "fuente"]];
+  VOTOS.forEach((v) => filas.push([
+    v.persona.apellido, v.persona.nombre, v.persona.bloque || "",
+    v.persona.provincia || "", v.valor, VOTACION.fuente_url,
+  ]));
+  const csv = filas.map((f) => f.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+  a.download = `votos-${slug}-${VOTACION.camara}-${VOTACION.fecha}.csv`;
+  a.click();
+}
+
+async function init() {
+  const cont = document.getElementById("contenido");
+  if (!slug) {
+    // sin slug: listar leyes
+    const leyes = await sb("ley", "select=titulo,slug,estado,expediente&order=id.desc");
+    cont.innerHTML = `<div class="panel"><h2>Leyes destacadas</h2>
+      <table class="votos"><tr><th>Ley</th><th>Expediente</th><th>Estado</th></tr>
+      ${leyes.map((l) => `<tr>
+        <td><a href="ley.html?slug=${encodeURIComponent(l.slug)}">${escaparHtml(l.titulo)}</a></td>
+        <td>${escaparHtml(l.expediente || "")}</td>
+        <td>${escaparHtml((l.estado || "").replace("_", " "))}</td></tr>`).join("")}
+      </table></div>`;
+    return;
+  }
+  try {
+    const leyes = await sb("ley", `select=*&slug=eq.${encodeURIComponent(slug)}&limit=1`);
+    if (!leyes.length) { cont.innerHTML = `<div class="aviso">No se encontró la ley.</div>`; return; }
+    const ley = leyes[0];
+    document.title = `${ley.titulo} — Políticos Argentinos`;
+
+    const votaciones = await sb("votacion", `select=*&ley_id=eq.${ley.id}&order=fecha.desc`);
+    let votacionHtml = `<div class="aviso">Todavía no hay votaciones nominales cargadas para esta ley.</div>`;
+
+    if (votaciones.length) {
+      VOTACION = votaciones[0];
+      VOTOS = await sb("voto",
+        `select=valor,persona(slug,nombre,apellido,bloque,provincia,foto_path)&votacion_id=eq.${VOTACION.id}&limit=400`);
+      VOTOS.sort((a, b) => a.persona.apellido.localeCompare(b.persona.apellido, "es"));
+
+      const cuenta = { afirmativo: 0, negativo: 0, abstencion: 0, ausente: 0 };
+      VOTOS.forEach((v) => cuenta[v.valor]++);
+      const bloques = [...new Set(VOTOS.map((v) => v.persona.bloque).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, "es"));
+
+      votacionHtml = `
+        <div class="panel">
+          <h3>Votación nominal — ${titulo(VOTACION.camara)}, ${fechaCorta(VOTACION.fecha)}
+              ${VOTACION.resultado ? `(${VOTACION.resultado})` : ""}</h3>
+          <div class="resumen-votos">
+            <div class="caja voto-afirmativo"><span class="num">${cuenta.afirmativo}</span><span class="rotulo">Afirmativos</span></div>
+            <div class="caja voto-negativo"><span class="num">${cuenta.negativo}</span><span class="rotulo">Negativos</span></div>
+            <div class="caja voto-abstencion"><span class="num">${cuenta.abstencion}</span><span class="rotulo">Abstenciones</span></div>
+            <div class="caja voto-ausente"><span class="num">${cuenta.ausente}</span><span class="rotulo">Ausentes</span></div>
+          </div>
+          <div class="filtros">
+            <input id="v-buscar" type="search" placeholder="Buscar legislador/a…">
+            <select id="v-valor">
+              <option value="">Todos los votos</option>
+              <option value="afirmativo">Afirmativo</option>
+              <option value="negativo">Negativo</option>
+              <option value="abstencion">Abstención</option>
+              <option value="ausente">Ausente</option>
+            </select>
+            <select id="v-bloque">
+              <option value="">Todos los bloques</option>
+              ${bloques.map((b) => `<option value="${escaparHtml(b)}">${escaparHtml(titulo(b))}</option>`).join("")}
+            </select>
+            <button class="btn" onclick="exportarCSV()">Descargar CSV</button>
+          </div>
+          <div class="contador" id="v-contador"></div>
+          <table class="votos" id="v-tabla"></table>
+          ${htmlFuente(VOTACION.fuente_url, "Acta oficial de votación", VOTACION.fecha_captura)}
+        </div>`;
+    }
+
+    cont.innerHTML = `
+      <div class="panel">
+        <h2>${escaparHtml(ley.titulo)}</h2>
+        <div class="dato"><span class="etiqueta">Expediente</span><span>${escaparHtml(ley.expediente || "—")}</span></div>
+        <div class="dato"><span class="etiqueta">Estado</span><span>${escaparHtml((ley.estado || "").replace("_", " "))}</span></div>
+        <p>${escaparHtml(ley.resumen || "")}</p>
+        ${htmlFuente(ley.fuente_url, ley.fuente_nombre, ley.fecha_captura)}
+      </div>
+      ${slug === "rigi" ? `<p><a class="btn" href="rigi.html">Ver mapa de adhesión provincial &rarr;</a></p>` : ""}
+      ${votacionHtml}`;
+
+    if (VOTOS.length) {
+      renderTabla();
+      ["v-buscar", "v-valor", "v-bloque"].forEach((id) =>
+        document.getElementById(id).addEventListener("input", renderTabla));
+    }
+  } catch (e) {
+    cont.innerHTML = `<div class="aviso">Error: ${escaparHtml(e.message)}</div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>

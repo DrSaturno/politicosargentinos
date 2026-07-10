@@ -1,0 +1,40 @@
+{
+  "name": "TransparenciaAR — Ingesta proyectos HCDN",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 24, "triggerAtHour": 7 }]
+        }
+      },
+      "name": "Cron diario 07:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "command": "cd /opt/transparencia-ar/scripts && python3 ingesta_proyectos_hcdn.py --dias 7"
+      },
+      "name": "Ingestar proyectos (últimos 7 días)",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "content": "## Nota\ndatos.hcdn.gob.ar es intermitente: el script ya reintenta 4 veces con backoff.\nSi el nodo falla igual, n8n lo reintenta en la próxima corrida (ventana de 7 días, sin pérdida).\nConfigurar en Settings del workflow: 'Retry On Fail' = true.",
+        "height": 180,
+        "width": 380
+      },
+      "name": "Nota",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [440, -220]
+    }
+  ],
+  "connections": {
+    "Cron diario 07:00": { "main": [[{ "node": "Ingestar proyectos (últimos 7 días)", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}

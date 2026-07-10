@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mapa RIGI — Adhesión provincial — Políticos Argentinos</title>
+<meta name="description" content="Qué provincias adhirieron al RIGI (Ley 27.742), cuáles no y cuáles lo están tratando. Con gobernador responsable, norma provincial y fuente.">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header class="sitio">
+  <h1><a href="index.html">Políticos Argentinos<small>datos oficiales, con fuente</small></a></h1>
+  <nav>
+    <a href="index.html">Directorio</a>
+    <a href="ley.html?slug=super-rigi">Súper RIGI</a>
+    <a href="rigi.html" class="activo">Mapa RIGI</a>
+  </nav>
+</header>
+<main>
+  <div class="panel">
+    <h2>Adhesión provincial al RIGI</h2>
+    <p>Régimen de Incentivo para Grandes Inversiones (<a href="ley.html?slug=rigi">Ley 27.742, Título VII</a>).
+    Cada provincia decide por ley propia si adhiere. Mapa esquemático: tocá una provincia para ver
+    el detalle, el gobernador responsable y la norma con su fuente.</p>
+    <div class="leyenda">
+      <span class="l-adherida">Adherida</span>
+      <span class="l-en_tratamiento">En tratamiento</span>
+      <span class="l-no_adherida">No adherida</span>
+    </div>
+    <div class="mapa-grilla" id="mapa"><div class="cargando">Cargando mapa…</div></div>
+    <div id="detalle"></div>
+  </div>
+</main>
+<footer class="sitio">
+  Todos los datos provienen de fuentes oficiales y citan su origen.
+</footer>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+// posición (columna, fila) de cada jurisdicción en el tilegrama
+const POSICIONES = {
+  "Jujuy": [1, 1], "Formosa": [2, 1],
+  "Salta": [1, 2], "Chaco": [2, 2], "Corrientes": [3, 2], "Misiones": [4, 2],
+  "Catamarca": [1, 3], "Tucumán": [2, 3], "Santiago del Estero": [3, 3],
+  "La Rioja": [1, 4], "Córdoba": [2, 4], "Santa Fe": [3, 4], "Entre Ríos": [4, 4],
+  "San Juan": [1, 5], "San Luis": [2, 5], "CABA": [4, 5],
+  "Mendoza": [1, 6], "La Pampa": [2, 6], "Buenos Aires": [3, 6],
+  "Neuquén": [1, 7], "Río Negro": [2, 7],
+  "Chubut": [2, 8],
+  "Santa Cruz": [2, 9],
+  "Tierra del Fuego": [2, 10],
+};
+const ETIQUETAS = { adherida: "Adherida", en_tratamiento: "En tratamiento", no_adherida: "No adherida" };
+let ADHESIONES = [];
+
+function mostrarDetalle(a) {
+  document.querySelectorAll(".prov").forEach((el) =>
+    el.classList.toggle("seleccionada", el.dataset.provincia === a.provincia));
+  const g = a.gobernador;
+  const foto = g ? fotoUrl(g.foto_path) : null;
+  document.getElementById("detalle").innerHTML = `
+    <div class="panel" style="margin-top:16px">
+      <h3>${escaparHtml(a.provincia)} — ${ETIQUETAS[a.estado]}</h3>
+      ${g ? `<div class="dato" style="align-items:center">
+        ${foto ? `<img src="${foto}" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover" onerror="this.remove()">` : ""}
+        <span class="etiqueta">Gobernador/a</span>
+        <a href="persona.html?slug=${encodeURIComponent(g.slug)}">${escaparHtml(g.nombre)} ${escaparHtml(g.apellido)}</a>
+      </div>` : ""}
+      ${a.norma_provincial ? `<div class="dato"><span class="etiqueta">Norma</span><span>${escaparHtml(a.norma_provincial)}</span></div>` : ""}
+      ${htmlFuente(a.fuente_url, "Estado de adhesión (Gobierno Nacional / norma provincial)", a.fecha_captura)}
+    </div>`;
+}
+
+async function init() {
+  try {
+    const leyes = await sb("ley", "select=id&slug=eq.rigi&limit=1");
+    ADHESIONES = await sb("provincia_adhesion",
+      `select=*,gobernador:persona(slug,nombre,apellido,foto_path)&ley_id=eq.${leyes[0].id}`);
+    const mapa = document.getElementById("mapa");
+    mapa.innerHTML = "";
+    ADHESIONES.forEach((a) => {
+      const pos = POSICIONES[a.provincia];
+      if (!pos) return;
+      const div = document.createElement("div");
+      div.className = `prov ${a.estado}`;
+      div.dataset.provincia = a.provincia;
+      div.style.gridColumn = pos[0];
+      div.style.gridRow = pos[1];
+      div.innerHTML = `${escaparHtml(a.provincia)}<small>${ETIQUETAS[a.estado]}</small>`;
+      div.onclick = () => mostrarDetalle(a);
+      div.setAttribute("role", "button");
+      div.setAttribute("tabindex", "0");
+      div.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") mostrarDetalle(a); };
+      mapa.appendChild(div);
+    });
+    const resumen = { adherida: 0, en_tratamiento: 0, no_adherida: 0 };
+    ADHESIONES.forEach((a) => resumen[a.estado]++);
+    document.getElementById("detalle").innerHTML = `
+      <p style="text-align:center;color:var(--texto-suave)">
+        ${resumen.adherida} adheridas · ${resumen.en_tratamiento} en tratamiento · ${resumen.no_adherida} no adheridas
+      </p>`;
+  } catch (e) {
+    document.getElementById("mapa").innerHTML =
+      `<div class="aviso">Error cargando el mapa: ${escaparHtml(e.message)}</div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>

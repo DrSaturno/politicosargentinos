@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ficha — Políticos Argentinos</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<header class="sitio">
+  <h1><a href="index.html">Políticos Argentinos<small>datos oficiales, con fuente</small></a></h1>
+  <nav>
+    <a href="index.html">Directorio</a>
+    <a href="ley.html?slug=super-rigi">Súper RIGI</a>
+    <a href="rigi.html">Mapa RIGI</a>
+  </nav>
+</header>
+<main id="contenido"><div class="cargando">Cargando ficha…</div></main>
+<footer class="sitio">
+  Todos los datos provienen de fuentes oficiales y citan su origen.
+</footer>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+const slug = new URLSearchParams(location.search).get("slug");
+
+function filaDato(etiqueta, valor) {
+  if (!valor) return "";
+  return `<div class="dato"><span class="etiqueta">${etiqueta}</span><span>${escaparHtml(valor)}</span></div>`;
+}
+
+async function init() {
+  const cont = document.getElementById("contenido");
+  if (!slug) { cont.innerHTML = `<div class="aviso">Falta el parámetro <code>slug</code>.</div>`; return; }
+  try {
+    const personas = await sb("persona", `select=*&slug=eq.${encodeURIComponent(slug)}&limit=1`);
+    if (!personas.length) { cont.innerHTML = `<div class="aviso">No se encontró la persona.</div>`; return; }
+    const p = personas[0];
+    document.title = `${p.nombre} ${p.apellido} — Políticos Argentinos`;
+
+    const [sueldos, votos, proyectos] = await Promise.all([
+      sb("sueldo", `select=*&cargo=eq.${p.cargo}&order=periodo.desc&limit=1`),
+      sb("voto", `select=valor,votacion(fecha,camara,resultado,fuente_url,ley(titulo,slug))&persona_id=eq.${p.id}&limit=100`),
+      sb("proyecto", `select=expediente,titulo,fecha,estado,fuente_url&persona_id=eq.${p.id}&order=fecha.desc&limit=30`),
+    ]);
+
+    const foto = fotoUrl(p.foto_path);
+    const imgHtml = foto
+      ? `<img src="${foto}" alt="${escaparHtml(p.nombre)} ${escaparHtml(p.apellido)}">`
+      : `<div class="sin-foto">&#128100;</div>`;
+    const fotoFuente = p.foto_fuente_url
+      ? htmlFuente(p.foto_fuente_url, p.foto_licencia || "foto", null) : "";
+
+    const sueldoHtml = sueldos.length ? `
+      <div class="panel">
+        <h3>Remuneración del cargo</h3>
+        <div class="monto">$ ${Number(sueldos[0].monto_bruto).toLocaleString("es-AR", {minimumFractionDigits: 2})}</div>
+        <div class="detalle" style="color:var(--texto-suave);font-size:.85rem">
+          ${escaparHtml(sueldos[0].descripcion || "")} (período ${escaparHtml(sueldos[0].periodo)})
+        </div>
+        ${htmlFuente(sueldos[0].fuente_url, sueldos[0].fuente_nombre, sueldos[0].fecha_captura)}
+      </div>` : "";
+
+    const votosHtml = votos.length ? `
+      <div class="panel">
+        <h3>Votaciones en leyes destacadas</h3>
+        <table class="votos">
+          <tr><th>Ley</th><th>Fecha</th><th>Cámara</th><th>Voto</th></tr>
+          ${votos.map((v) => `
+            <tr>
+              <td><a href="ley.html?slug=${encodeURIComponent(v.votacion.ley.slug)}">${escaparHtml(v.votacion.ley.titulo)}</a></td>
+              <td>${fechaCorta(v.votacion.fecha)}</td>
+              <td>${escaparHtml(titulo(v.votacion.camara))}</td>
+              <td><span class="voto-chip voto-${v.valor}">${v.valor.toUpperCase()}</span></td>
+            </tr>`).join("")}
+        </table>
+        ${htmlFuente(votos[0].votacion.fuente_url, "Acta oficial de votación", null)}
+      </div>` : "";
+
+    const proyectosHtml = proyectos.length ? `
+      <div class="panel">
+        <h3>Proyectos presentados (autor)</h3>
+        <table class="votos">
+          <tr><th>Expediente</th><th>Título</th><th>Fecha</th></tr>
+          ${proyectos.map((pr) => `
+            <tr>
+              <td>${escaparHtml(pr.expediente)}</td>
+              <td>${escaparHtml(pr.titulo)}</td>
+              <td>${fechaCorta(pr.fecha)}</td>
+            </tr>`).join("")}
+        </table>
+        ${htmlFuente(proyectos[0].fuente_url, "HCDN Datos Abiertos — Proyectos Parlamentarios", null)}
+      </div>` : "";
+
+    cont.innerHTML = `
+      <div class="ficha">
+        <div class="foto">${imgHtml}${fotoFuente}</div>
+        <div>
+          <div class="panel">
+            <span class="badge ${p.cargo}">${CARGOS[p.cargo] || p.cargo}</span>
+            <h2>${escaparHtml(p.nombre)} ${escaparHtml(p.apellido)}</h2>
+            ${filaDato("Provincia", titulo(p.provincia))}
+            ${filaDato("Bloque", titulo(p.bloque))}
+            ${filaDato("Partido", p.partido && p.partido !== p.bloque ? titulo(p.partido) : "")}
+            ${filaDato("Ministerio", titulo(p.ministerio))}
+            ${filaDato("Mandato", p.mandato_inicio ? `${fechaCorta(p.mandato_inicio)} — ${fechaCorta(p.mandato_fin)}` : "")}
+            ${htmlFuente(p.fuente_url, p.fuente_nombre, p.fecha_captura)}
+          </div>
+          ${sueldoHtml}
+          ${votosHtml}
+          ${proyectosHtml}
+        </div>
+      </div>`;
+  } catch (e) {
+    cont.innerHTML = `<div class="aviso">Error cargando la ficha: ${escaparHtml(e.message)}</div>`;
+  }
+}
+init();
+</script>
+</body>
+</html>

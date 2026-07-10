@@ -1,0 +1,13 @@
+# credenciales — nunca commitear
+scripts/.env
+.env
+
+# fotos descargadas (viven en Supabase Storage; el manifest sí se versiona)
+scripts/fotos/
+
+# artefactos de corridas
+scripts/votos_sin_match.txt
+scripts/votos_senado_sin_match.txt
+scripts/*_errores.txt
+__pycache__/
+*.pyc
