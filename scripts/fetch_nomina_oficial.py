@@ -124,6 +124,11 @@ def obtener_diputados(sesion, timeout=60, reintentos=3):
                 foto_url = "https://www.hcdn.gob.ar" + foto_url
             if "silueta" in foto_url:  # placeholder generico = sin foto real
                 foto_url = ""
+            # La tabla de nomina linkea el thumbnail "_small" (60x60px), que
+            # queda pixelado al mostrarlo mas grande en la web. Mismo archivo,
+            # mismo dominio, pero "_medium" (200x200px) existe y luce bien.
+            elif foto_url.endswith("_small.png"):
+                foto_url = foto_url[: -len("_small.png")] + "_medium.png"
 
         apellido, nombre = [p.strip() for p in texto.split(",", 1)]
 
@@ -203,6 +208,11 @@ def obtener_senadores(sesion, timeout=60, reintentos=3):
         mandato_inicio = str(fila.get("D_LEGAL", "")).strip()
         mandato_fin = str(fila.get("C_LEGAL", "")).strip()
         foto = str(fila.get("FOTO", "")).strip()
+        # El JSON linkea la carpeta "fsena" (88x88px, pixelada en la web).
+        # "fsenaG" es el mismo archivo en 110x110px y existe para todos los
+        # senadores activos (verificado); no hay variante mas grande que esa.
+        if "/images/fsena/" in foto:
+            foto = foto.replace("/images/fsena/", "/images/fsenaG/")
 
         if not (apellido and nombre):
             continue
