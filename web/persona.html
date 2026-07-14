@@ -58,7 +58,12 @@ async function init() {
         <div class="detalle" style="color:var(--texto-suave);font-size:.85rem">
           ${escaparHtml(sueldos[0].descripcion || "")} (período ${escaparHtml(sueldos[0].periodo)})
         </div>
+        <div class="detalle" style="color:var(--texto-suave);font-size:.85rem;margin-top:4px">
+          Equivale a ${(Number(sueldos[0].monto_bruto) / SMVM.valor).toLocaleString("es-AR", {maximumFractionDigits: 1})}
+          salarios mínimos, vitales y móviles (SMVM $${SMVM.valor.toLocaleString("es-AR")}, ${SMVM.periodo}).
+        </div>
         ${htmlFuente(sueldos[0].fuente_url, sueldos[0].fuente_nombre, sueldos[0].fecha_captura)}
+        ${htmlFuente(SMVM.fuente_url, SMVM.fuente_nombre, null)}
       </div>` : "";
 
     const meses = sueldos.length && p.mandato_inicio ? mesesEntre(p.mandato_inicio, new Date().toISOString()) : 0;

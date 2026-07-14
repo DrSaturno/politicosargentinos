@@ -17,6 +17,16 @@ function fotoUrl(fotoPath) {
   return `${CONFIG.SUPABASE_URL}/storage/v1/object/public/fotos/${fotoPath}`;
 }
 
+// Salario Mínimo, Vital y Móvil vigente (Resolución 9/2025, Consejo Nacional del
+// Empleo, la Productividad y el SMVM — escala noviembre 2025 a agosto 2026).
+// Actualizar el valor y período cuando entre en vigencia el próximo escalón.
+const SMVM = {
+  valor: 372400,
+  periodo: "julio 2026",
+  fuente_url: "https://www.boletinoficial.gob.ar/detalleAviso/primera/335463/20251203",
+  fuente_nombre: "Boletín Oficial — Resolución 9/2025",
+};
+
 // "UNIÓN POR LA PATRIA" -> "Unión Por La Patria"
 function titulo(s) {
   if (!s) return "";
