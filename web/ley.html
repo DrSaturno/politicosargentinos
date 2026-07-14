@@ -73,12 +73,12 @@ async function init() {
     // sin slug: listar leyes
     const leyes = await sb("ley", "select=titulo,slug,estado,expediente&order=id.desc");
     cont.innerHTML = `<div class="panel"><h2>Leyes destacadas</h2>
-      <table class="votos"><tr><th>Ley</th><th>Expediente</th><th>Estado</th></tr>
+      <div class="tabla-scroll"><table class="votos"><tr><th>Ley</th><th>Expediente</th><th>Estado</th></tr>
       ${leyes.map((l) => `<tr>
         <td><a href="ley.html?slug=${encodeURIComponent(l.slug)}">${escaparHtml(l.titulo)}</a></td>
         <td>${escaparHtml(l.expediente || "")}</td>
         <td>${escaparHtml((l.estado || "").replace("_", " "))}</td></tr>`).join("")}
-      </table></div>`;
+      </table></div></div>`;
     return;
   }
   try {
@@ -127,7 +127,7 @@ async function init() {
             <button class="btn" onclick="exportarCSV()">Descargar CSV</button>
           </div>
           <div class="contador" id="v-contador"></div>
-          <table class="votos" id="v-tabla"></table>
+          <div class="tabla-scroll"><table class="votos" id="v-tabla"></table></div>
           ${htmlFuente(VOTACION.fuente_url, "Acta oficial de votación", VOTACION.fecha_captura)}
         </div>`;
     }

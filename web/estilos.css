@@ -131,6 +131,7 @@ main { max-width: 1100px; margin: 0 auto; padding: clamp(16px, 3vw, 28px) clamp(
 
 /* ---------- ficha persona ---------- */
 .ficha { display: grid; grid-template-columns: 230px 1fr; gap: 20px; align-items: start; }
+.ficha > div { min-width: 0; }
 .ficha .foto { position: sticky; top: 76px; }
 .ficha .foto img, .ficha .foto .sin-foto {
   width: 100%; border-radius: var(--radio); border: 1px solid var(--borde);
@@ -163,7 +164,7 @@ main { max-width: 1100px; margin: 0 auto; padding: clamp(16px, 3vw, 28px) clamp(
 
 /* ---------- tablas ---------- */
 .tabla-scroll { overflow-x: auto; }
-table.votos { width: 100%; border-collapse: collapse; font-size: .87rem; }
+table.votos { width: 100%; min-width: 520px; border-collapse: collapse; font-size: .87rem; }
 table.votos th, table.votos td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--borde); }
 table.votos tr:last-child td { border-bottom: none; }
 table.votos tbody tr:hover, table.votos tr:not(:first-child):hover { background: #f7fafc; }

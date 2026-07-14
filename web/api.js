@@ -40,6 +40,15 @@ function fechaCorta(iso) {
   return `${d}/${m}/${y}`;
 }
 
+// Meses completos transcurridos entre dos fechas ISO (para estimar dieta cobrada).
+function mesesEntre(inicioIso, finIso) {
+  const inicio = new Date(inicioIso);
+  const fin = new Date(finIso);
+  let meses = (fin.getFullYear() - inicio.getFullYear()) * 12 + (fin.getMonth() - inicio.getMonth());
+  if (fin.getDate() < inicio.getDate()) meses--;
+  return Math.max(0, meses);
+}
+
 // Componente <Fuente>: toda card con dato externo muestra su fuente con link.
 function htmlFuente(url, nombre, fechaCaptura) {
   if (!url) return "";

@@ -61,10 +61,23 @@ async function init() {
         ${htmlFuente(sueldos[0].fuente_url, sueldos[0].fuente_nombre, sueldos[0].fecha_captura)}
       </div>` : "";
 
+    const meses = sueldos.length && p.mandato_inicio ? mesesEntre(p.mandato_inicio, new Date().toISOString()) : 0;
+    const cobradoHtml = meses > 0 ? `
+      <div class="panel">
+        <h3>Estimado cobrado en este mandato</h3>
+        <div class="monto">$ ${(meses * Number(sueldos[0].monto_bruto)).toLocaleString("es-AR", {maximumFractionDigits: 0})}</div>
+        <div class="detalle" style="color:var(--texto-suave);font-size:.85rem">
+          Cálculo: ${meses} meses desde el inicio del mandato (${fechaCorta(p.mandato_inicio)}) × dieta bruta mensual
+          vigente hoy. Es una cifra piso a valores actuales: no ajusta por inflación histórica ni refleja el monto
+          nominal que cobró mes a mes (las dietas fueron menores en pesos en períodos anteriores). No incluye
+          mandatos previos en otros cargos.
+        </div>
+      </div>` : "";
+
     const votosHtml = votos.length ? `
       <div class="panel">
         <h3>Votaciones en leyes destacadas</h3>
-        <table class="votos">
+        <div class="tabla-scroll"><table class="votos">
           <tr><th>Ley</th><th>Fecha</th><th>Cámara</th><th>Voto</th></tr>
           ${votos.map((v) => `
             <tr>
@@ -73,14 +86,14 @@ async function init() {
               <td>${escaparHtml(titulo(v.votacion.camara))}</td>
               <td><span class="voto-chip voto-${v.valor}">${v.valor.toUpperCase()}</span></td>
             </tr>`).join("")}
-        </table>
+        </table></div>
         ${htmlFuente(votos[0].votacion.fuente_url, "Acta oficial de votación", null)}
       </div>` : "";
 
     const proyectosHtml = proyectos.length ? `
       <div class="panel">
         <h3>Proyectos presentados (autor)</h3>
-        <table class="votos">
+        <div class="tabla-scroll"><table class="votos">
           <tr><th>Expediente</th><th>Título</th><th>Fecha</th></tr>
           ${proyectos.map((pr) => `
             <tr>
@@ -88,7 +101,7 @@ async function init() {
               <td>${escaparHtml(pr.titulo)}</td>
               <td>${fechaCorta(pr.fecha)}</td>
             </tr>`).join("")}
-        </table>
+        </table></div>
         ${htmlFuente(proyectos[0].fuente_url, "HCDN Datos Abiertos — Proyectos Parlamentarios", null)}
       </div>` : "";
 
@@ -107,6 +120,7 @@ async function init() {
             ${htmlFuente(p.fuente_url, p.fuente_nombre, p.fecha_captura)}
           </div>
           ${sueldoHtml}
+          ${cobradoHtml}
           ${votosHtml}
           ${proyectosHtml}
         </div>
