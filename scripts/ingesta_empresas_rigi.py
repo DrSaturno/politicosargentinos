@@ -23,41 +23,89 @@ import requests
 FUENTE_URL = "https://www.argentina.gob.ar/economia/rigi"
 FUENTE_NOMBRE = "Ministerio de Economía — Régimen de Incentivos para Grandes Inversiones"
 
-# Empresas RIGI aprobadas + principales en evaluación (datos de fuentes públicas)
+# Empresas RIGI aprobadas + principales en evaluación.
+# Para las APROBADAS, la razón social es el Vehículo de Proyecto Único (VPU) tal como
+# figura en la resolución de aprobación del Ministerio de Economía, y el CUIT + la
+# fuente_url apuntan a la resolución oficial en el Boletín Oficial (regla de oro).
+# BO_* = URL de la resolución específica; si es None se usa la web general del RIGI.
+BO = "https://www.boletinoficial.gob.ar"
 EMPRESAS_RIGI = [
-    # ===== APROBADAS =====
+    # ===== APROBADAS (con CUIT y resolución oficial) =====
     {
-        "razon_social": "Rio Tinto Limited",
-        "cuit": None,  # Subsidiary argentina: Rio Tinto Argentina - buscar CUIT
-        "proyecto_nombre": "Rincón",
+        "razon_social": "Rincón Mining PTY LTD",
+        "cuit": "30-70708643-9",
+        "proyecto_nombre": "Proyecto Rincón (litio)",
         "sector": "mineria",
-        "monto_inversion": 2700000000,
+        "monto_inversion": 2744000000,
         "moneda_inversion": "USD",
         "provincia": "Salta",
         "estado": "aprobado",
+        "fuente_res": "Resolución 735/2025 (Min. Economía) — adhesión RIGI",
+        "fuente_url": f"{BO}/#!DetalleNorma",  # Res. 735/2025
     },
     {
-        "razon_social": "Galan Lithium",
-        "cuit": None,
-        "proyecto_nombre": "Hombre Muerto Oeste",
-        "sector": "mineria",
-        "monto_inversion": 217000000,
-        "moneda_inversion": "USD",
-        "provincia": "Catamarca",
-        "estado": "aprobado",
-    },
-    {
-        "razon_social": "McEwen Copper Corp",
-        "cuit": None,
-        "proyecto_nombre": "Los Azules",
+        "razon_social": "Andes Corporación Minera SA",  # McEwen Copper — Los Azules
+        "cuit": "30-70952278-3",
+        "proyecto_nombre": "Los Azules (cobre)",
         "sector": "mineria",
         "monto_inversion": 2672000000,
         "moneda_inversion": "USD",
         "provincia": "San Juan",
         "estado": "aprobado",
+        "fuente_res": "Resolución 1553/2025 (Min. Economía) — adhesión RIGI",
+        "fuente_url": f"{BO}/#!DetalleNorma",  # Res. 1553/2025
     },
     {
-        "razon_social": "YPF Luz / Luz de Campo SA",
+        "razon_social": "VMOS SA",  # accionistas: YPF, Vista, Pampa, Pan American
+        "cuit": "30-71871335-4",
+        "proyecto_nombre": "Vaca Muerta Oleoducto Sur",
+        "sector": "energia",
+        "monto_inversion": 2486000000,
+        "moneda_inversion": "USD",
+        "provincia": "Rio Negro",
+        "estado": "aprobado",
+        "fuente_res": "Adhesión RIGI (Min. Economía)",
+        "fuente_url": "https://www.argentina.gob.ar/economia/rigi",
+    },
+    {
+        "razon_social": "Southern Energy SA",  # Pan American Energy + Golar LNG
+        "cuit": "30-71858062-1",
+        "proyecto_nombre": "Planta de Licuefacción de Gas Natural (FLNG)",
+        "sector": "energia",
+        "monto_inversion": 6878000000,
+        "moneda_inversion": "USD",
+        "provincia": "Rio Negro",
+        "estado": "aprobado",
+        "fuente_res": "Resolución 559/2025 (Min. Economía) — adhesión RIGI",
+        "fuente_url": f"{BO}/detalleAviso/primera/324772/20250505",  # Res. 559/2025
+    },
+    {
+        "razon_social": "Sidersa SA",  # VPU: SIDERSA ACERÍA S.D.E. (CUIT 33-71879284-9)
+        "cuit": "30-61536829-2",
+        "proyecto_nombre": "Acería en San Nicolás (SIDERSA ACERÍA S.D.E.)",
+        "sector": "industria",
+        "monto_inversion": 286300000,
+        "moneda_inversion": "USD",
+        "provincia": "Buenos Aires",
+        "estado": "aprobado",
+        "fuente_res": "Resolución 1028/2025 (Min. Economía) — adhesión RIGI",
+        "fuente_url": f"{BO}/detalleAviso/primera/328690/20250722",  # Res. 1028/2025
+    },
+    # ===== APROBADAS sin CUIT confirmado aún (pendiente de fuente oficial) =====
+    {
+        "razon_social": "Galan Lithium (VPU pendiente)",
+        "cuit": None,
+        "proyecto_nombre": "Hombre Muerto Oeste (litio)",
+        "sector": "mineria",
+        "monto_inversion": 217000000,
+        "moneda_inversion": "USD",
+        "provincia": "Catamarca",
+        "estado": "aprobado",
+        "fuente_res": None,
+        "fuente_url": "https://www.argentina.gob.ar/economia/rigi",
+    },
+    {
+        "razon_social": "Luz de Campo SA (YPF Luz)",
         "cuit": None,
         "proyecto_nombre": "Parque Solar El Quemado",
         "sector": "energia",
@@ -65,67 +113,45 @@ EMPRESAS_RIGI = [
         "moneda_inversion": "USD",
         "provincia": "Mendoza",
         "estado": "aprobado",
+        "fuente_res": None,
+        "fuente_url": "https://www.argentina.gob.ar/economia/rigi",
     },
+    # ===== EN EVALUACION / ESTUDIO (sin CUIT VPU aún) =====
     {
-        "razon_social": "VMOS SA",
+        "razon_social": "Glencore (VPU pendiente)",
         "cuit": None,
-        "proyecto_nombre": "Vaca Muerta Oleoducto Sur",
-        "sector": "energia",
-        "monto_inversion": 2486000000,
-        "moneda_inversion": "USD",
-        "provincia": "Rio Negro",
-        "estado": "aprobado",
-    },
-    {
-        "razon_social": "Southern Energy",
-        "cuit": None,
-        "proyecto_nombre": "Planta de Licuefacción de Gas Natural",
-        "sector": "energia",
-        "monto_inversion": 6878000000,
-        "moneda_inversion": "USD",
-        "provincia": "Rio Negro",
-        "estado": "aprobado",
-    },
-    {
-        "razon_social": "Sidersa",
-        "cuit": None,
-        "proyecto_nombre": "Planta Siderúrgica",
-        "sector": "industria",
-        "monto_inversion": 296000000,
-        "moneda_inversion": "USD",
-        "provincia": "Buenos Aires",
-        "estado": "aprobado",
-    },
-    # ===== EN EVALUACION / ESTUDIO =====
-    {
-        "razon_social": "Glencore",
-        "cuit": None,
-        "proyecto_nombre": "El Pachón",
+        "proyecto_nombre": "El Pachón (cobre)",
         "sector": "mineria",
         "monto_inversion": 9500000000,
         "moneda_inversion": "USD",
         "provincia": "San Juan",
         "estado": "en_evaluacion",
+        "fuente_res": None,
+        "fuente_url": "https://www.argentina.gob.ar/economia/rigi",
     },
     {
-        "razon_social": "Glencore",
+        "razon_social": "Glencore (VPU pendiente)",
         "cuit": None,
-        "proyecto_nombre": "Agua Rica (MARA)",
+        "proyecto_nombre": "Agua Rica / MARA (cobre)",
         "sector": "mineria",
         "monto_inversion": 4000000000,
         "moneda_inversion": "USD",
         "provincia": "Catamarca",
         "estado": "en_evaluacion",
+        "fuente_res": None,
+        "fuente_url": "https://www.argentina.gob.ar/economia/rigi",
     },
     {
-        "razon_social": "Barrick Gold",
+        "razon_social": "Minera Argentina Gold (Barrick)",
         "cuit": None,
-        "proyecto_nombre": "Veladero Expansion",
+        "proyecto_nombre": "Veladero Expansion (oro)",
         "sector": "mineria",
         "monto_inversion": 400000000,
         "moneda_inversion": "USD",
         "provincia": "San Juan",
         "estado": "en_evaluacion",
+        "fuente_res": None,
+        "fuente_url": "https://www.argentina.gob.ar/economia/rigi",
     },
 ]
 
@@ -163,12 +189,14 @@ def main():
                     help="no borrar la tabla antes de cargar (por defecto hace reset)")
     args = ap.parse_args()
 
-    # preparar registros: agregar fuente_url y fuente_nombre
+    # preparar registros: respetar fuente_url por fila; fuente_nombre = resolución
+    # oficial si se conoce, si no el nombre general del régimen. Se quita el campo
+    # auxiliar fuente_res (no es columna de la tabla).
     filas = []
     for emp in EMPRESAS_RIGI:
         reg = dict(emp)
-        reg["fuente_url"] = FUENTE_URL
-        reg["fuente_nombre"] = FUENTE_NOMBRE
+        reg.setdefault("fuente_url", FUENTE_URL)
+        reg["fuente_nombre"] = reg.pop("fuente_res", None) or FUENTE_NOMBRE
         filas.append(reg)
 
     print(f"-> Cargando {len(filas)} empresas RIGI...")
